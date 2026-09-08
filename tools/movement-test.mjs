@@ -4,6 +4,8 @@ import {mkdir} from 'node:fs/promises';
 import {realBrowserOptions} from './real-browser.mjs';
 const browser=await chromium.launch(realBrowserOptions);
 const context=await browser.newContext();
+const base=new URL(process.argv[2] || 'http://localhost:3000/').href;
+const romPath=process.argv[3];
 await mkdir('test-results',{recursive:true});
 async function videoPixels(page,rect){return page.evaluate(([x,y,w,h])=>{
  const canvas=document.createElement('canvas');canvas.width=256;canvas.height=224;
@@ -12,11 +14,11 @@ async function videoPixels(page,rect){return page.evaluate(([x,y,w,h])=>{
 },rect);}
 function difference(a,b){return a.reduce((sum,value,index)=>sum+(index%4===3?0:Math.abs(value-b[index])),0)/a.length;}
 try{
- const host=await context.newPage();await host.goto('http://localhost:3000');await host.bringToFront();await host.click('#host',{force:true});
+ const host=await context.newPage();await host.goto(base);await host.bringToFront();if(romPath)await host.setInputFiles('#rom',romPath);await host.click('#host',{force:true});
  await host.waitForFunction(()=>window.EJS_emulator?.gameManager?.functions.getFrameNum()>500,{timeout:90000});
  for(const key of ['Enter','Enter','Enter','ArrowDown','Enter','KeyX','Enter']){await host.keyboard.press(key,{delay:500});await host.waitForTimeout(2500);}
  const code=await host.locator('#room-code').textContent();
- const guest=await context.newPage();await guest.goto('http://localhost:3000/?room='+code);await guest.bringToFront();
+ const guest=await context.newPage();await guest.goto(new URL('?room='+code,base).href);await guest.bringToFront();
  await guest.waitForFunction(()=>document.querySelector('video').videoWidth>0,{timeout:45000});
  assert.equal(await guest.evaluate(()=>document.activeElement.id),'screen');
  assert.equal(await guest.locator('#join').isDisabled(),true);
@@ -48,7 +50,7 @@ try{
  assert.ok(audioPeak>0.001,`Hidden host must keep streaming sound: ${audioPeak}`);
  console.log('BACKGROUND AUDIO PASSED',audioPeak);
  await guest.close();await host.waitForFunction(()=>document.querySelector('#room-status').textContent.includes('open again'),{timeout:15000});
- const manual=await context.newPage();await manual.goto('http://localhost:3000');await manual.fill('#code',code);await manual.press('#code','Enter');
+ const manual=await context.newPage();await manual.goto(base);await manual.fill('#code',code);await manual.press('#code','Enter');
  await manual.waitForFunction(()=>document.querySelector('video').videoWidth>0,{timeout:45000});
  assert.equal(await manual.evaluate(()=>document.activeElement.id),'screen');
  await manual.keyboard.down('ArrowLeft');await manual.waitForTimeout(700);await manual.keyboard.up('ArrowLeft');await manual.waitForTimeout(1500);

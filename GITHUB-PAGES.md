@@ -1,5 +1,7 @@
 # Publish Goof Troop Online
 
+Live site: **https://jpdieffe.github.io/goof_troop/**. This repository is already configured to publish through Actions; the steps below also describe how to set up another copy.
+
 The repository includes `.github/workflows/pages.yml`. It builds and publishes only the browser app. The host picks a ROM from their computer; the guest connects to the host's stream.
 
 1. Create a GitHub repository, for example `goof-troop-online`, with `main` as its default branch. On GitHub Free, use a public repository for Pages.

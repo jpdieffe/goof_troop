@@ -2,6 +2,8 @@
 
 A browser SNES player with two-person rooms. The host runs the original ROM through EmulatorJS 4.2.3. Their friend receives live video/audio and sends controller input over WebRTC using PeerJS 1.5.5. This is an emulator-based adaptation, **not a decompilation or source port**.
 
+**[Play online](https://jpdieffe.github.io/goof_troop/)** — choose your local ROM, create a room, and send the invite link to your friend. No local server or launcher is needed for the published site.
+
 ## Play on this computer
 
 Double-click `start-game.bat`, or run `npm start` and open http://localhost:3000. Node.js is required; the app server has no npm runtime dependencies.
@@ -15,7 +17,7 @@ Keep the host tab open and the computer awake. Hosting continues when you switch
 
 ## Play with a friend over the internet
 
-For GitHub Pages, follow [GITHUB-PAGES.md](GITHUB-PAGES.md). An automatic publishing workflow is included; the site is not live until the repository is connected and that workflow runs successfully.
+The app is published at **https://jpdieffe.github.io/goof_troop/**. Pushes to `main` automatically update it after tests pass. For deployment details, see [GITHUB-PAGES.md](GITHUB-PAGES.md).
 
 `localhost` links work only on the computer opening them. Either both people run this app locally (share the **room code**), or put the app at a shared HTTPS URL:
 
