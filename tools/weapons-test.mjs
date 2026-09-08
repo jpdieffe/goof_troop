@@ -18,6 +18,12 @@ try{
   await guest.goto(new URL('?room='+await host.locator('#room-code').textContent(),url).href);await guest.bringToFront();
   await guest.waitForFunction(()=>document.querySelector('video').videoWidth>0,null,{timeout:40000});
   assert.equal(await host.evaluate(()=>document.hidden),true);
+  // Start also joins an already-running one-player game through the native engine.
+  if(!await host.evaluate(()=>EJS_emulator.Module.HEAPU8[goofGatling.base+0x180])){
+    await guest.keyboard.press('Enter',{delay:180});
+    await host.waitForFunction(()=>EJS_emulator.Module.HEAPU8[goofGatling.base+0xbd]===3);
+    await host.waitForFunction(()=>{const r=EJS_emulator.Module.HEAPU8.subarray(goofGatling.base);return !r[0xac]&&goofGatling.model.player(r,1).canAct;});
+  }
   await guest.keyboard.press('ArrowDown',{delay:180});await guest.keyboard.press('KeyX',{delay:180});
   await host.waitForFunction(()=>goofGatling.model.equipped[1]);
   assert.deepEqual(await host.evaluate(()=>goofGatling.model.equipped),[false,true]);
@@ -39,7 +45,9 @@ try{
   assert.ok(await host.evaluate(()=>{const r=EJS_emulator.Module.HEAPU8.subarray(goofGatling.base);return [0x840,0x890].some(b=>r[b]===0);}), 'native cleanup releases a defeated pirate slot');
   console.log('GUEST GATLING',await host.evaluate(()=>({shots:goofGatling.model.shots,hits:goofGatling.model.hits,flightSamples:nativeFlight.length,frame:EJS_emulator.gameManager.functions.getFrameNum()})));
   // Host can collect the other gun without taking it from player two.
-  await host.bringToFront();await host.waitForFunction(()=>!document.hidden);await host.locator('#screen').focus();await host.keyboard.press('ArrowDown',{delay:250});await host.keyboard.press('KeyX',{delay:180});
+  await host.bringToFront();await host.waitForFunction(()=>!document.hidden);await host.locator('#screen').focus();
+  if(await host.evaluate(()=>EJS_emulator.Module.HEAPU8[goofGatling.base+0x103]===4))await host.keyboard.press('KeyX',{delay:180});
+  await host.keyboard.press('ArrowDown',{delay:250});await host.keyboard.press('KeyX',{delay:180});
   console.log('HOST PICKUP',await host.evaluate(()=>({players:[0,1].map(i=>goofGatling.model.player(EJS_emulator.Module.HEAPU8.subarray(goofGatling.base),i)),pickups:goofGatling.model.pickups,equipped:goofGatling.model.equipped})));
   await host.waitForFunction(()=>goofGatling.model.equipped.every(Boolean));
   await host.waitForFunction(()=>{const r=EJS_emulator.Module.HEAPU8.subarray(goofGatling.base);return !r[0xac]&&goofGatling.model.player(r,0).canAct;});
