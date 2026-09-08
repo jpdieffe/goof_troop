@@ -4,6 +4,12 @@ A browser SNES player with two-person rooms. The host runs the original ROM thro
 
 **[Play online](https://jpdieffe.github.io/goof_troop/)** — choose your local ROM, create a room, and send the invite link to your friend. No local server or launcher is needed for the published site.
 
+## New: beach Gatling gun
+
+Leave **Beach Gatling prototype** enabled when hosting. Two guns wait on the first beach, just below the players. Walk over one, face a direction, and hold **Q** (gamepad left shoulder, or the **Fire** touch button). Bullets launch regular pirates using the original defeat animation. Two pirates appear on the beach for testing after the first pickup. Both players can carry a gun; the guest sees everything in the host’s stream.
+
+This browser runtime mod requires the original USA ROM and uses custom graphics plus the game’s actual enemy routines. It does not require a separately patched ROM. See [MODDING.md](MODDING.md) for scope, source references and testing.
+
 ## Play on this computer
 
 Double-click `start-game.bat`, or run `npm start` and open http://localhost:3000. Node.js is required; the app server has no npm runtime dependencies.
@@ -25,7 +31,7 @@ The app is published at **https://jpdieffe.github.io/goof_troop/**. Pushes to `m
 npm run build
 ```
 
-Upload only the contents of `dist/` to an HTTPS static host. This build includes the app files and **excludes the ROM**. On that site the host chooses their local ROM file; the guest just joins. Invite links then point to the shared site. No deployment has been performed automatically.
+Upload only the contents of `dist/` to an HTTPS static host. This build includes the app files and **excludes the ROM**. On that site the host chooses their local ROM file; the guest just joins. Invite links then point to the shared site.
 
 Room discovery uses the public PeerJS signaling service. STUN helps discover direct network routes. Gameplay media and controls travel directly between browsers; there is no gameplay server or TURN relay configured. Some corporate networks, carrier networks, and restrictive routers prevent direct WebRTC. If a connection fails, try a different network. Supporting those networks reliably would require a TURN relay, which would relay traffic instead of keeping it direct.
 
@@ -53,6 +59,8 @@ npm start
 npm run test:browser
 # Real foreground/background tabs, with ordinary browser throttling:
 npm run test:movement
+# Beach pickups, bullets, native pirate flight, and guest firing:
+npm run test:gatling
 ```
 
 The unit/integration tests validate input bounds, key release, room codes, and static server boundaries. The browser test loads the actual ROM, creates a real room, joins from a second tab, checks rendered video and non-silent audio samples, verifies player-two press/release at the emulator API, and tests leaving/rejoining. Screenshots are saved in `test-results/`. The browser test needs internet access and `public/local-rom.zip`. Testing two tabs cannot prove connectivity between all home networks.

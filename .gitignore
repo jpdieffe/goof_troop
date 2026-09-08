@@ -5,3 +5,4 @@ node_modules/
 tools/*.reference.txt
 test-results/
 dist/
+research/

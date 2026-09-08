@@ -1,6 +1,7 @@
 import {KEY_MAP,validState,normalizeCode,validCode,applyMask} from './protocol.js';
 import {installFrameClock} from './frame-clock.js';
 import {configureHostCore} from './host-core.js';
+import {installGatling} from './gatling.js';
 const $ = id => document.getElementById(id);
 let peer,connection,call,stream,mode,ready=false,remoteMask=0,localMask=0,lastRemote=0,room='',connectionTimer;
 const held=new Set(),touchHeld=new Set();
@@ -9,9 +10,10 @@ const prefix='gooftroop-v1-';
 // Capture the pinned SNES core's active audio sources, without microphone permission.
 let audioDestination;
 let stopFrameClock;
+let gatling;
 function simulate(player,index,value){if(ready)window.EJS_emulator.gameManager.simulateInput(player,index,value);}
 function releaseRemote(){applyMask(remoteMask,0,(i,v)=>simulate(1,i,v));remoteMask=0;}
-function setBusy(busy){$('host').disabled=busy;$('join').disabled=busy;$('rom').disabled=busy;$('code').disabled=busy;$('leave').hidden=!busy;}
+function setBusy(busy){$('gatling-enabled').disabled=busy;$('host').disabled=busy;$('join').disabled=busy;$('rom').disabled=busy;$('code').disabled=busy;$('leave').hidden=!busy;}
 function focusGame(){ $('screen').focus({preventScroll:true}); }
 function fail(error){status(typeof error==='string'?error:error.message || 'Connection failed.');}
 function closeGuest(){releaseRemote();call?.close();call=null;connection?.close();connection=null;if(mode==='host')$('room-status').textContent='Player two left. Your room is open again.';}
@@ -23,7 +25,7 @@ function createPeer(id){return new Promise((resolve,reject)=>{
   peer.on('error',e=>{clearTimeout(timer);reject(e);fail(e.type==='peer-unavailable'?'Room not found. Check the code and that your friend is still hosting.':e);});
   peer.on('disconnected',()=>status('Room service disconnected. Reload if your friend cannot join.'));
 });}
-function capture(){if(stream)return stream;const canvas=window.EJS_emulator.canvas;if(!canvas?.captureStream)throw Error('Game streaming requires a browser with canvas capture support. Try Chrome or Edge.');
+function capture(){if(stream)return stream;const canvas=gatling?.canvas||window.EJS_emulator.canvas;if(!canvas?.captureStream)throw Error('Game streaming requires a browser with canvas capture support. Try Chrome or Edge.');
   stream=canvas.captureStream(60);
   const audio=window.EJS_emulator.Module.AL?.currentCtx;
   if(audio?.audioCtx){audioDestination=audio.audioCtx.createMediaStreamDestination();audio.gain.connect(audioDestination);for(const track of audioDestination.stream.getAudioTracks())stream.addTrack(track);}
@@ -51,8 +53,9 @@ async function loadGame(){let rom=$('rom').files[0];if(!rom){const response=awai
     configureHostCore(emulator);
     // Install the patch before loading even a cached core, then start as usual.
     $('game').querySelector('.ejs_start_button').click();
-  },EJS_onGameStart:()=>{
+  },EJS_onGameStart:async()=>{
     if(window.EJS_emulator.failedToStart)return fail('The emulator could not start. Reload and check browser graphics support.');
+    if($('gatling-enabled').checked){try{gatling=await installGatling(window.EJS_emulator,()=>[localMask,remoteMask],error=>fail('Gatling mod stopped: '+error.message));window.goofGatling=gatling;}catch(error){$('mod-note').textContent=error.message+' Playing without the mod.';}}
     ready=true;window.EJS_emulator.keyChange=()=>{};window.EJS_emulator.gamepadEvent=()=>{};
     status('Game ready. Choose GAME, skip the intro with Enter, then select a bottom-row two-player team.');startCall();
   }});
@@ -81,7 +84,7 @@ window.addEventListener('keydown',e=>{if(/INPUT|TEXTAREA|SELECT/.test(e.target.t
 window.addEventListener('keyup',e=>{held.delete(e.code);if(KEY_MAP[e.code]!==undefined&&mode&&!/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)){e.preventDefault();e.stopImmediatePropagation();}},true);
 window.addEventListener('blur',releaseLocal);document.addEventListener('visibilitychange',()=>{if(document.hidden)releaseLocal();});
 window.addEventListener('pagehide',()=>{releaseLocal();peer?.destroy();stopFrameClock?.();});
-const buttons=[['↑',4],['←',6],['↓',5],['→',7],['A',8],['B',0],['X',9],['Y',1],['Start',3],['Select',2]];
+const buttons=[['↑',4],['←',6],['↓',5],['→',7],['A',8],['B',0],['X',9],['Y',1],['Fire',10],['Start',3],['Select',2]];
 for(const [label,index] of buttons){const b=document.createElement('button');b.textContent=label;b.setAttribute('aria-label',`Controller ${label}`);b.onpointerdown=e=>{e.preventDefault();b.setPointerCapture(e.pointerId);touchHeld.add(index);};for(const event of ['pointerup','pointercancel','lostpointercapture'])b.addEventListener(event,()=>touchHeld.delete(index));$('touch').append(b);}
 function frame(){let mask=0;if(ready&&!document.hidden){for(const code of held)mask|=1<<KEY_MAP[code];for(const i of touchHeld)mask|=1<<i;
   const pad=Array.from(navigator.getGamepads?.()||[]).find(p=>p?.mapping==='standard');if(pad){const map={0:0,1:8,2:1,3:9,4:10,5:11,8:2,9:3,12:4,13:5,14:6,15:7};for(const [b,i]of Object.entries(map))if(pad.buttons[b]?.pressed)mask|=1<<i;if(pad.axes[0]<-.5)mask|=1<<6;if(pad.axes[0]>.5)mask|=1<<7;if(pad.axes[1]<-.5)mask|=1<<4;if(pad.axes[1]>.5)mask|=1<<5;}}

@@ -8,7 +8,10 @@ export function patchHostCore(source){
   if(source.split(audioGuard).length!==3 || source.split(videoCallback).length!==2){
     throw new Error('The emulator core changed and its background-play patch could not be applied.');
   }
-  return source.replaceAll(audioGuard,'').replace(videoCallback,'_platform_emscripten_update_window_hidden_cb(false)');
+  const frame='MainLoop.runIter(iterFunc);';
+  if(source.split(frame).length!==2)throw new Error('The emulator frame hook changed.');
+  return source.replaceAll(audioGuard,'').replace(videoCallback,'_platform_emscripten_update_window_hidden_cb(false)')
+    .replace(frame,frame+'Module["goofModFrame"]?.();');
 }
 
 export function configureHostCore(emulator){
