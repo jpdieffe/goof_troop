@@ -93,8 +93,10 @@ export async function installGatling(emulator,getMasks,onError){
         const p=model.player(ram,i),type=model.inventory.held[i];if(type!=='mech'&&p.visible&&model.flash[i]>0)gun(p.x,p.y-p.z-11,p.direction,true,type);
         const x=i?208:40;ctx.fillStyle='#31562b';ctx.fillRect(x,8,16,16);ctx.drawImage(sprites[type],x,type==='mech'?8:11,16,type==='mech'?16:11);
       }
-      for(const beam of model.lasers)if(beam)laser(beam);
+      for(const beam of model.lasers)if(beam&&beam.direction!==2)laser(beam);
       for(const i of [0,1].sort((a,b)=>model.player(ram,a).y-model.player(ram,b).y))if(model.inventory.held[i]==='mech'){const p=model.player(ram,i);if(p.visible)robot(p,i);}
+      // Downward fire points toward the viewer, so it belongs in front of the suit.
+      for(const beam of model.lasers)if(beam?.direction===2)laser(beam);
       for(const b of model.bullets){const [dx,dy]=DIRECTIONS[b.direction];ctx.strokeStyle='#cb7430';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(b.x-dx*7,b.y-9-dy*7);ctx.lineTo(b.x,b.y-9);ctx.stroke();ctx.strokeStyle='#fff4ad';ctx.lineWidth=1;ctx.stroke();}
       for(const r of model.rockets){ctx.save();ctx.translate(r.x,r.y-9);ctx.rotate((r.direction-1)*Math.PI/2);ctx.fillStyle='#696d42';ctx.fillRect(-6,-3,11,6);ctx.fillStyle='#f1b75e';ctx.fillRect(4,-2,4,4);ctx.fillStyle='#f05c2b';ctx.fillRect(-11,-2,5,4);ctx.fillStyle='#ffeab0';ctx.fillRect(-9,-1,3,2);ctx.restore();}
       for(const e of model.explosions){const age=24-e.life;for(let n=0;n<8;n++){const a=n*Math.PI/4,spread=Math.min(age*1.4,21);ctx.fillStyle=age<12?'#ed6a28':'#817568aa';ctx.beginPath();ctx.arc(e.x+Math.cos(a)*spread,e.y+Math.sin(a)*spread-age*.3,Math.max(2,11-age*.28),0,Math.PI*2);ctx.fill();}if(age<14){ctx.fillStyle=age<7?'#fff7ba':'#ffbf4f';ctx.beginPath();ctx.arc(e.x,e.y,14-age*.6,0,Math.PI*2);ctx.fill();}}
