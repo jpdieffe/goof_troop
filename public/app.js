@@ -11,7 +11,7 @@ const prefix='gooftroop-v1-';
 let audioDestination;
 let stopFrameClock;
 let gatling;
-function simulate(player,index,value){if(ready)window.EJS_emulator.gameManager.simulateInput(player,index,value);}
+function simulate(player,index,value){if(index===1&&gatling?.model.equipped[player])value=0;if(ready)window.EJS_emulator.gameManager.simulateInput(player,index,value);}
 function releaseRemote(){applyMask(remoteMask,0,(i,v)=>simulate(1,i,v));remoteMask=0;}
 function setBusy(busy){$('gatling-enabled').disabled=busy;$('host').disabled=busy;$('join').disabled=busy;$('rom').disabled=busy;$('code').disabled=busy;$('leave').hidden=!busy;}
 function focusGame(){ $('screen').focus({preventScroll:true}); }
@@ -55,7 +55,7 @@ async function loadGame(){let rom=$('rom').files[0];if(!rom){const response=awai
     $('game').querySelector('.ejs_start_button').click();
   },EJS_onGameStart:async()=>{
     if(window.EJS_emulator.failedToStart)return fail('The emulator could not start. Reload and check browser graphics support.');
-    if($('gatling-enabled').checked){try{gatling=await installGatling(window.EJS_emulator,()=>[localMask,remoteMask],error=>fail('Gatling mod stopped: '+error.message));window.goofGatling=gatling;}catch(error){$('mod-note').textContent=error.message+' Playing without the mod.';}}
+    if($('gatling-enabled').checked){try{gatling=await installGatling(window.EJS_emulator,()=>[localMask,remoteMask],error=>fail('Weapon mod stopped: '+error.message));window.goofGatling=gatling;}catch(error){$('mod-note').textContent=error.message+' Playing without the mod.';}}
     ready=true;window.EJS_emulator.keyChange=()=>{};window.EJS_emulator.gamepadEvent=()=>{};
     status('Game ready. Choose GAME, skip the intro with Enter, then select a bottom-row two-player team.');startCall();
   }});

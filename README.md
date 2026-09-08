@@ -4,11 +4,13 @@ A browser SNES player with two-person rooms. The host runs the original ROM thro
 
 **[Play online](https://jpdieffe.github.io/goof_troop/)** — choose your local ROM, create a room, and send the invite link to your friend. No local server or launcher is needed for the published site.
 
-## New: beach Gatling gun
+## Beach weapons
 
-Leave **Beach Gatling prototype** enabled when hosting. Two guns wait on the first beach, just below the players. Walk over one, face a direction, and hold **Q** (gamepad left shoulder, or the **Fire** touch button). Bullets launch regular pirates using the original defeat animation. Two pirates appear on the beach for testing after the first pickup. Both players can carry a gun; the guest sees everything in the host’s stream.
+Leave **Beach weapons** enabled when hosting. There are two Gatlings by the water and two rocket launchers farther up the opening beach. Walk close, face the item, and press **X / SNES B** to pick it up. It occupies your normal inventory box. Picking up a grappling gun or another item swaps it with your weapon; the old item stays on the ground for either player.
 
-This browser runtime mod requires the original USA ROM and uses custom graphics plus the game’s actual enemy routines. It does not require a separately patched ROM. See [MODDING.md](MODDING.md) for scope, source references and testing.
+Hold **S / SNES Y** to use the weapon, or **Q / gamepad left shoulder / Fire** as a shortcut. Gatlings fire a stream of bullets. Rockets fire more slowly, deal blast damage, and destroy wall/tree tiles together with their collision. Both use the original pirate defeat animation. Two pirates appear after the first weapon pickup for testing.
+
+The host needs the original USA ROM. Guests receive the complete modified scene through the usual stream. No separate ROM patch is needed. See [MODDING.md](MODDING.md) for implementation, scope and tests.
 
 ## Play on this computer
 
@@ -61,6 +63,8 @@ npm run test:browser
 npm run test:movement
 # Beach pickups, bullets, native pirate flight, and guest firing:
 npm run test:gatling
+# Inventory swaps, native grapple use, rockets and destructible scenery:
+npm run test:weapons
 ```
 
 The unit/integration tests validate input bounds, key release, room codes, and static server boundaries. The browser test loads the actual ROM, creates a real room, joins from a second tab, checks rendered video and non-silent audio samples, verifies player-two press/release at the emulator API, and tests leaving/rejoining. Screenshots are saved in `test-results/`. The browser test needs internet access and `public/local-rom.zip`. Testing two tabs cannot prove connectivity between all home networks.

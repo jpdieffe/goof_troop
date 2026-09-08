@@ -1,10 +1,12 @@
-# Beach Gatling prototype
+# Beach weapons
 
-Enabled by default; uncheck **Beach Gatling prototype** before hosting for the original game. The host needs the unmodified USA ROM (524,288 bytes, CRC32 `4aafa462`); a 512-byte copier header is also accepted. ZIP extraction is handled by EmulatorJS. Other ROMs run without the mod and show an explanation.
+Enabled by default; uncheck **Beach weapons** before hosting for the original game. Requires the unmodified USA ROM (524,288 bytes, CRC32 `4aafa462`); a 512-byte copier header is accepted. ZIP extraction is handled by EmulatorJS. Other ROMs run without the mod and show an explanation.
 
-There are two gun pickups on the sand just below the players in stage one's first room. Walk over one to equip it. Aim with the directional controls and hold **Q / SNES L / gamepad left shoulder / Fire**. Each player gets one gun, with unlimited ammunition and 15 shots per second. Equipment stays with you between rooms for the session. Two native Jolly pirates spawn on the beach after the first pickup for testing. Start a new game/session to reset the playground.
+Two Gatlings wait near the water at the first beach; two rocket launchers wait farther up the sand. Approach and face an item, then press **X / SNES B** to pick it up with the original animation. The weapon occupies the normal co-op inventory slot and displays its icon in that box. Taking the grappling gun, another weapon, or another native item exchanges it with your equipped item. The old item stays on the ground and can be picked back up by either player.
 
-This first prototype targets regular pirates. NPCs, bosses, scenery and other enemy families do not receive Gatling damage. Bullets stop at solid collision tiles, expire offscreen and clear on room changes. Gameplay pauses stop the weapon simulation. Original buttons, inventory and puzzle mechanics still work. Custom equipment and bullets are browser session state; emulator save states/rewind do not save or restore them.
+Use **S / SNES Y**, or **Q / gamepad left shoulder / Fire** as a shortcut. Gatlings fire every four frames; rockets every forty frames. Rockets explode on impact, defeat nearby pirates, and remove wall/tree graphics and collision. NPCs and other players are not damaged. Water, room boundaries and item pickups are preserved. The original destructible-wall handler is triggered for wall sprites. Ordinary terrain destruction is remembered across room revisits during the session. Two native Jolly pirates spawn for beach target practice after the first weapon pickup.
+
+Regular pirates are the supported enemy family; bosses and other families keep their original behavior. Native inventory animations and pauses stop custom firing. Custom weapon identity, dropped-item records, and destroyed scenery are session state, not part of emulator save states/rewind. Reload/start a new game to reset the playground.
 
 ## Implementation
 
@@ -20,14 +22,28 @@ Two empty normal sprite slots on the beach are initialized as Jolly pirates. The
 
 Memory and routine references were investigated using [Yoshifanatic1's disassembly](https://github.com/Yoshifanatic1/Goof-Troop-Disassembly), [FURiOUS's practice cart](https://github.com/furious/gooftroop), and [GoofTroopEditor](https://github.com/Zarby89/GoofTroopEditor). Those research checkouts are ignored and not shipped. Application code implements the behavior independently; upstream projects retain their licenses.
 
+## Inventory and scenery
+
+`weapon-inventory.js` uses the game's valid bell item ID (`$0C`) as the native carrier and tracks Gatling/rocket identity separately. Custom ground objects use the four native item slots `$1040..$10A0`. The original pickup code exchanges the carrier in `$0142`/`$01C2`, updates the inventory and plays the pickup animation. The mod consumes the native pickup/exchange event once, transfers custom identity to the recipient, and tags the dropped item. Native grappling guns remain original items and regain their original Y-button behavior immediately after a swap. Native item-use input is suppressed only while a custom weapon occupies that player's slot. The renderer replaces the carrier's ground and HUD artwork with the correct sprite.
+
+Synthetic ground items temporarily borrow a native persistence nibble; its original value is restored after native processing so collecting a beach weapon does not change an unrelated level-item flag. Dropped native items at synthetic locations are also tracked. Room revisits rebind existing native ground objects before allocating free slots, avoiding duplicate drops. No custom item ID is passed to an out-of-range native dispatch table.
+
+`weapon-terrain.js` decodes the room's original 32/16/8-pixel metatiles directly from the locally supplied ROM. A rocket clears affected collision bytes at `$1400` and their backing copy at `$7F:F800`. It replaces foreground tiles and supplies matching walkable ground underneath. Item collision is protected. Tall scenery above impact is included in the blast so tree canopies are removed along with their footprint.
+
+Background changes use the native DMA queue at `$1800`, bounded by its `$40` cursor. Small tile uploads target foreground/background VRAM maps `$5000` and `$5800`, with transient source words at unused `$7F:FC00`. Uploads wait when the game's queue is busy. This changes the actual emulated background, so characters can walk through the resulting hole and guests see the same scene. Destruction records are reapplied when returning to a room; original dynamic objects and native wall sprites retain their own handlers.
+
 ## Art
 
 `public/assets/gatling.png` was generated with the built-in image generation tool. The original transparent PNG is preserved; the renderer trims transparent margins and draws it on a small pixel grid. Final prompt:
 
 > Use case: stylized-concept. Asset type: production pixel-art game weapon sprite on a truly transparent background. Create ONE compact Gatling gun pickup sprite for a colorful 1990s 16-bit top-down adventure game in the visual spirit of SNES Goof Troop. The object should have clearly readable oversized rotating multi-barrel assembly pointing to the RIGHT, dark navy outlines, polished slate-blue steel, brass barrel bands, a small reddish-brown wooden pistol grip, a round ammunition drum, and a few bright cyan highlight pixels. Slight three-quarter top-down view, with the top and side visible, suitable for being held by a small cartoon character. Flat crisp pixel-art clusters, no anti-aliasing, no gradients, no text, no watermark, no scene or ground. Designed on a 32 by 24 pixel logical grid, nearest-neighbor enlarged if needed. Keep all parts inside a compact silhouette with a small transparent margin. No bullets, no muzzle flash, no person. Gun occupies most of the image. Truly transparent background.
 
+`public/assets/rocket.png` was also generated with the built-in image generation tool. Final prompt:
+
+> Production game asset: ONE compact cartoon rocket launcher pickup sprite for a colorful 1990s SNES top-down adventure, matching a chunky Goof Troop-style pixel-art weapon. Truly transparent background. Right-facing three-quarter view showing top and side. Short oversized olive-green tube with a wide dark muzzle ring on the RIGHT, orange-red bands, pale steel sights, small wooden grip and a tiny yellow warning stripe. Friendly exaggerated toy-like silhouette, dark navy pixel outlines, crisp flat pixel clusters, no gradients, no antialiasing. Readable at a 32x20 logical-pixel size. Gun alone, no rocket flying, no person, no shadow, no scene, no text, no watermark. Center the full gun with a small transparent margin. Render as pixel art enlarged with nearest-neighbor edges.
+
 ## Verification
 
-`npm test` checks independent pickups/firing, native fatal damage fields, NPC immunity, solid terrain, pauses, room changes and ROM fingerprinting, as well as the original input/server tests.
+`npm test` covers native inventory exchange events (including same-carrier weapon swaps), loss of gun firing after taking a grapple, independent firing, native pirate damage, rocket cadence, pauses, collision removal, item protection, bounded DMA writes and terrain persistence, plus the original controller/server tests.
 
-`npm run test:gatling` uses the local ROM in real Chrome tabs. It tests player two picking up and firing through WebRTC while the host is hidden, observes native death substates/altitude/velocity in live RAM, checks firing release and player one's independent pickup/fire. Screenshots go to `test-results/`. An optional URL and ROM path can follow the command, for example `npm run test:gatling -- https://jpdieffe.github.io/goof_troop/ "Goof Troop.zip"`.
+`npm run test:gatling` exercises two real Chrome tabs, native pickups, remote firing with a hidden host, original pirate flight/cleanup and independent host controls. `npm run test:weapons` adds a native grappling-gun fixture to exercise swapping, original grapple use and re-pickup, then collects a rocket, destroys trees/walls, and walks through the former obstacles using normal controller input. It supports an optional live URL and local ROM path. `npm run test:movement` checks animated guest video, background-host speed and audio. Screenshots go to ignored `test-results/`.
