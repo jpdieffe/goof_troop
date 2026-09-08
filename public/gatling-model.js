@@ -19,7 +19,7 @@ export function defeatPirate(ram,slot,direction){
 
 export class GatlingModel{
   constructor(terrain=null){this.terrain=terrain;this.reset();}
-  reset(){this.inventory=new WeaponInventory();this.equipped=[false,false];this.cooldown=[0,0];this.flash=[0,0];this.bullets=[];this.rockets=[];this.explosions=[];this.sparks=[];this.room=-1;this.active=false;this.ticks=0;this.shots=[0,0];this.hits=[0,0];this.targetsSpawned=false;this.notice='Face an item: X to pick up. S / Q to fire.';this.noticeTime=360;this.pickupSerial=0;this.booms=0;this.terrain?.reset();}
+  reset(){this.inventory=new WeaponInventory();this.equipped=[false,false];this.cooldown=[0,0];this.flash=[0,0];this.lasers=[null,null];this.transform=[0,0];this.bullets=[];this.rockets=[];this.explosions=[];this.sparks=[];this.room=-1;this.active=false;this.ticks=0;this.shots=[0,0];this.hits=[0,0];this.targetsSpawned=false;this.notice='Face an item: X to pick up. S / Q to fire.';this.noticeTime=360;this.pickupSerial=0;this.booms=0;this.terrain?.reset();}
   get pickups(){return this.inventory.ground.filter(g=>g.room===this.room&&g.type);}
   player(ram,i){const b=0x100+i*0x80;return {x:word(ram,b+0x11),y:word(ram,b+0x14),z:ram[b+0x17],direction:(ram[b+0x47]>>1)&3,visible:!!ram[b]&&!!ram[b+1],canAct:ram[b]===1&&ram[b+2]===2&&ram[b+3]===0};}
   spawnTargets(ram){
@@ -45,22 +45,41 @@ export class GatlingModel{
     }
     this.terrain?.blast(ram,rocket.x,rocket.y);
   }
+  fireLaser(ram,beam){
+    const [dx,dy]=DIRECTIONS[beam.direction];
+    // Test every target against the full ray: neither scenery nor a first enemy
+    // absorbs the beam. Native enemy/wall routines still perform their cleanup.
+    for(let slot=0x200;slot<0x980;slot+=0x50){
+      const x=word(ram,slot+0x11)-beam.x,y=word(ram,slot+0x14)-beam.y;
+      if(x*dx+y*dy<0||Math.abs(x*dy-y*dx)>18)continue;
+      if(defeatPirate(ram,slot,beam.direction)){this.hits[beam.owner]++;this.sparks.push({x:word(ram,slot+0x11),y:word(ram,slot+0x14)-9,life:8});}
+      if(ram[slot]&&ram[slot+0xa]===0x2c&&ram[slot+0x1c]){ram[slot+0x1d]=ram[slot+0x1c];ram[slot+0x1c]=0;}
+    }
+    this.terrain?.beam(ram,beam.x,beam.y,dx,dy);
+  }
   tick(ram,masks){
     if(ram[0xa0]!==8){if(this.active||this.equipped.some(Boolean))this.reset();return;}
     const room=ram[0xb6]*256+ram[0xb7];
-    if(room!==this.room){this.bullets=[];this.rockets=[];this.sparks=[];this.explosions=[];this.room=room;}
+    if(room!==this.room){this.bullets=[];this.rockets=[];this.sparks=[];this.explosions=[];this.lasers=[null,null];this.room=room;}
     const wasActive=this.active;this.active=ram[0xa2]===4;
-    if(!this.active)return;
+    if(!this.active){this.lasers=[null,null];return;}
     if(!wasActive){this.inventory.room=-1;if(this.terrain)this.terrain.room=-1;}
-    this.inventory.update(ram,room);this.equipped=this.inventory.held.map(Boolean);
+    const previous=[...this.inventory.held];this.inventory.update(ram,room);this.equipped=this.inventory.held.map(Boolean);
+    for(let i=0;i<2;i++)if(previous[i]!==this.inventory.held[i]){this.cooldown[i]=0;this.lasers[i]=null;this.transform[i]=this.inventory.held[i]==='mech'?30:0;}
+    if(this.terrain)this.terrain.pickups=this.inventory.ground.filter(g=>g.room===room);
     this.terrain?.enter(ram,room);this.terrain?.flush(ram);
     if(this.inventory.serial!==this.pickupSerial){this.pickupSerial=this.inventory.serial;const p=this.inventory.lastPickup;this.notice=p.type?`P${p.player+1}: ${p.type.toUpperCase()}! Hold S / Q.`:`P${p.player+1}: item swapped. Weapon left behind.`;this.noticeTime=240;}
     if(ram[0xab]||ram[0xac])return;
     this.ticks++;if(this.noticeTime>0)this.noticeTime--;
     for(let i=0;i<2;i++){
-      const p=this.player(ram,i),weapon=this.inventory.held[i];this.flash[i]=Math.max(0,this.flash[i]-1);this.cooldown[i]=Math.max(0,this.cooldown[i]-1);
+      const p=this.player(ram,i),weapon=this.inventory.held[i];this.flash[i]=Math.max(0,this.flash[i]-1);this.cooldown[i]=Math.max(0,this.cooldown[i]-1);this.transform[i]=Math.max(0,this.transform[i]-1);
+      this.lasers[i]=null;
       if(!p.canAct)continue;
-      if(weapon&&(masks[i]&((1<<FIRE_BUTTON)|(1<<ITEM_USE_BUTTON)))&&!this.cooldown[i]){
+      const firing=weapon&&(masks[i]&((1<<FIRE_BUTTON)|(1<<ITEM_USE_BUTTON)));
+      if(firing&&weapon==='mech'){
+        const [dx,dy]=DIRECTIONS[p.direction];this.lasers[i]={x:p.x+dx*18,y:p.y+dy*18,direction:p.direction,owner:i};
+        if(!this.cooldown[i]){this.fireLaser(ram,this.lasers[i]);this.cooldown[i]=6;this.shots[i]++;}
+      }else if(firing&&!this.cooldown[i]){
         const [dx,dy]=DIRECTIONS[p.direction];
         const projectile={x:p.x+dx*12,y:p.y+dy*12,direction:p.direction,owner:i,age:0};
         (weapon==='rocket'?this.rockets:this.bullets).push(projectile);

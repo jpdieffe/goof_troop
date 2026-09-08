@@ -6,7 +6,7 @@ const slots=[0x1040,0x1060,0x1080,0x10a0];
 const word=(r,a)=>r[a]|r[a+1]<<8;
 export class WeaponInventory{
   constructor(){this.reset();}
-  reset(){this.held=[null,null];this.room=-1;this.ground=[{room:0,x:64,y:144,type:'gatling'},{room:0,x:96,y:144,type:'gatling'},{room:0,x:64,y:88,type:'rocket'},{room:0,x:96,y:88,type:'rocket'}];this.bound=new Map();this.handled=new Set();this.serial=0;this.lastPickup=null;}
+  reset(){this.held=[null,null];this.room=-1;this.ground=[{room:0,x:64,y:144,type:'gatling'},{room:0,x:96,y:144,type:'gatling'},{room:0,x:64,y:88,type:'rocket'},{room:0,x:96,y:88,type:'rocket'},{room:0,x:64,y:56,type:'mech'},{room:0,x:96,y:56,type:'mech'}];this.bound=new Map();this.handled=new Set();this.serial=0;this.lastPickup=null;}
   restoreFlag(r,item){if(item?.flagOriginal!==undefined){const id=item.flagId,a=0x1160+(id>>1),shift=(id&1)*4;r[a]=(r[a]&~(15<<shift))|(item.flagOriginal<<shift);}}
   update(r,room){
     if(this.room!==room){this.bound.clear();this.handled.clear();this.room=room;}
@@ -28,11 +28,24 @@ export class WeaponInventory{
       item.x=word(r,b+0x11);item.y=word(r,b+0x14);if(item.type)r[b+1]=0; // Replace native bell art.
       this.restoreFlag(r,item);
     }
+    const distance=item=>Math.min(...[0x100,0x180].filter(b=>r[b]).map(b=>Math.hypot(item.x-word(r,b+0x11),item.y-word(r,b+0x14))));
     for(const item of this.ground.filter(g=>g.room===room)){
       if([...this.bound.values()].includes(item))continue;
       const existing=slots.find(b=>r[b]&&r[b+0xb]===(item.itemId||WEAPON_CARRIER)-2&&word(r,b+0x11)===item.x&&word(r,b+0x14)===item.y&&!this.bound.has(b));
       if(existing!==undefined){this.bound.set(existing,item);continue;}
-      const b=slots.find(b=>!r[b]);if(b===undefined)break;
+      let b=slots.find(b=>!r[b]);
+      // The original game has only four ground-item slots. Keep distant custom
+      // pickups visible in JS and lend their slots to nearby ones. Native items
+      // and in-progress pickup animations are never evicted.
+      if(b===undefined&&!r[0xac]&&!r[0xab]){
+        const distant=[...this.bound].filter(([s,g])=>g.type&&r[s]===1&&r[s+2]===2&&!r[s+4]&&distance(g)>20&&distance(g)>distance(item)+8).sort((a,b)=>distance(b[1])-distance(a[1]))[0];
+        if(distant){b=distant[0];const old=distant[1],tile=word(r,b+0x18);
+          // Same four collision bytes restored by native item cleanup $82:B100.
+          if(tile<991)for(const offset of [0,1,32,33])r[0x1400+tile+offset]=r[0x1f800+tile+offset];
+          this.restoreFlag(r,old);this.bound.delete(b);this.handled.delete(b);r.fill(0,b,b+0x20);
+        }
+      }
+      if(b===undefined)continue;
       r.fill(0,b,b+0x20);r[b]=2;r[b+0xb]=(item.itemId||WEAPON_CARRIER)-2;r[b+0x11]=item.x;r[b+0x14]=item.y;
       // Borrow a flag nibble only while this synthetic object is in the room;
       // restore its original contents after native pickup/update processing.

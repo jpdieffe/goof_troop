@@ -58,7 +58,7 @@ try{
   // Return to the pickup line and introduce a native grappling-gun fixture.
   await host.keyboard.down('ArrowLeft');await host.waitForFunction(()=>EJS_emulator.Module.HEAPU8[goofGatling.base+0x111]<=64);await host.keyboard.up('ArrowLeft');
   await host.keyboard.press('ArrowDown',{delay:50});
-  await host.evaluate(()=>{const r=EJS_emulator.Module.HEAPU8.subarray(goofGatling.base);const b=[0x1040,0x1060,0x1080,0x10a0].find(b=>!r[b]);if(b===undefined)throw Error('No item fixture slot');r.fill(0,b,b+32);r[b]=2;r[b+0xb]=0;r[b+0xd]=27;r[b+0x11]=64;r[b+0x14]=144;});
+  await host.evaluate(()=>{const r=EJS_emulator.Module.HEAPU8.subarray(goofGatling.base);const inv=goofGatling.model.inventory;const b=[0x1040,0x1060,0x1080,0x10a0].find(b=>!r[b])??[...inv.bound].find(([b,g])=>g.type==='mech'&&r[b]===1&&r[b+2]===2)?.[0];if(b===undefined)throw Error('No item fixture slot');const old=inv.bound.get(b);if(old){const t=r[b+0x18]|r[b+0x19]<<8;for(const d of [0,1,32,33])r[0x1400+t+d]=r[0x1f800+t+d];inv.restoreFlag(r,old);inv.ground.splice(inv.ground.indexOf(old),1);inv.bound.delete(b);inv.handled.delete(b);}r.fill(0,b,b+32);r[b]=2;r[b+0xb]=0;r[b+0xd]=27;r[b+0x11]=64;r[b+0x14]=144;});
   await host.waitForTimeout(400);await host.keyboard.press('KeyX',{delay:150});
   await host.waitForFunction(()=>EJS_emulator.Module.HEAPU8[goofGatling.base+0x142]===2&&!goofGatling.model.equipped[0]);
   await host.waitForFunction(()=>{const r=EJS_emulator.Module.HEAPU8.subarray(goofGatling.base);return !r[0xac]&&goofGatling.model.player(r,0).canAct;});await host.locator('#screen').screenshot({path:'test-results/weapon-grapple-swap.png'});

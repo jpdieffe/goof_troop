@@ -2,7 +2,7 @@
 
 Enabled by default; uncheck **Beach weapons** before hosting for the original game. Requires the unmodified USA ROM (524,288 bytes, CRC32 `4aafa462`); a 512-byte copier header is accepted. ZIP extraction is handled by EmulatorJS. Other ROMs run without the mod and show an explanation.
 
-Two Gatlings wait near the water at the first beach; two rocket launchers wait farther up the sand. Approach and face an item, then press **X / SNES B** to pick it up with the original animation. The weapon occupies the normal co-op inventory slot and displays its icon in that box. Taking the grappling gun, another weapon, or another native item exchanges it with your equipped item. The old item stays on the ground and can be picked back up by either player.
+Two Gatlings wait near the water at the first beach; two rocket launchers wait farther up the sand, with two mech capsules above them. Approach and face an item, then press **X / SNES B** to pick it up with the original animation. The weapon occupies the normal co-op inventory slot and displays its icon in that box. Taking the grappling gun, another weapon, or another native item exchanges it with your equipped item. The old item stays on the ground and can be picked back up by either player.
 
 Use **S / SNES Y**, or **Q / gamepad left shoulder / Fire** as a shortcut. Gatlings fire every four frames; rockets every forty frames. Rockets explode on impact, defeat nearby pirates, and remove wall/tree graphics and collision. NPCs and other players are not damaged. Water, room boundaries and item pickups are preserved. The original destructible-wall handler is triggered for wall sprites. Ordinary terrain destruction is remembered across room revisits during the session. Two native Jolly pirates spawn for beach target practice after the first weapon pickup.
 
@@ -32,7 +32,45 @@ Synthetic ground items temporarily borrow a native persistence nibble; its origi
 
 Background changes use the native DMA queue at `$1800`, bounded by its `$40` cursor. Small tile uploads target foreground/background VRAM maps `$5000` and `$5800`, with transient source words at unused `$7F:FC00`. Uploads wait when the game's queue is busy. This changes the actual emulated background, so characters can walk through the resulting hole and guests see the same scene. Destruction records are reapplied when returning to a room; original dynamic objects and native wall sprites retain their own handlers.
 
+## Mech suits
+
+The mech capsule occupies the same native inventory slot as a gun. Two capsules
+start at (64,56) and (96,56), above the rocket row. Equipping one draws a large
+directional robot over the adventurer, with a transformation ring and walking bob.
+Native movement, damage, pickup animations and room transitions remain active.
+Swapping the capsule for any other item returns the original character immediately.
+Hold the regular weapon button for a continuous laser; release stops it. Each
+player has an independent beam, cyan for player one and gold for player two.
+
+The laser traces the entire room in the current facing direction every six game
+frames, defeating every regular pirate along the ray with the original death
+handler and damaging native breakable-wall sprites. A broad terrain cut removes
+successive trees and solid walls, including their canopy tiles, without stopping
+at the first obstacle. Items, friendly NPCs, water and outer room boundaries remain
+intact. The existing limitation for bosses and other enemy families still applies.
+Laser audio enters the same native audio gain used by the guest stream.
+
+There are six custom beach pickups but only four native world-item slots. Nearby
+custom pickups borrow slots from distant, idle custom items; original native
+items and pickup animations are never evicted. Slot recycling restores the four
+collision bytes from the room backing map, matching native cleanup at $82:B100.
+Unbound custom pickups retain their artwork and identity, and rebind before a
+player enters pickup range. Terrain destruction protects those pickups too.
+
+`npm run test:mech` uses real controller input to pick up a mech before any other
+item, verifies inventory and swapping out/back, fires through two native practice
+pirates and multiple obstacles, walks through the cut, and tests the second mech
+over WebRTC with the host hidden. The test positions the two initialized pirates
+in the firing lane; production spawning remains at their original beach positions.
+
 ## Art
+
+`public/assets/mech.png` was generated with the built-in image generation tool.
+The original transparent three-view sheet is preserved. The renderer crops the
+three cells at runtime and mirrors the generated left-facing side view for right.
+Final prompt:
+
+> Use case: stylized-concept. Production pixel-art sprite sheet for a colorful 1990s SNES top-down adventure game. Truly transparent background. EXACTLY THREE separate full-body views of the SAME large friendly combat mech robot arranged in three equal horizontal cells: LEFT CELL facing DOWN toward the viewer, MIDDLE CELL facing RIGHT in side three-quarter view, RIGHT CELL facing UP away from viewer showing its back. Each robot fully contained and centered in its own cell with generous transparent space separating them. Chunky teal and cobalt armor, warm brass joints, bright cyan visor, oversized shoulder plates, heavy stomping feet, one oversized cylindrical arm cannon with glowing cyan muzzle. Broad squat imposing silhouette, approximately twice a cartoon adventurer's size. Clear dark navy pixel outlines, crisp flat pixel clusters, limited 16-bit palette, no gradients or antialiasing. Top-down game perspective with top surfaces visible; feet aligned at the same baseline in all three cells. Same robot proportions and scale in all views. Idle standing poses, no laser or effects. No people, no shadows, no scenery, no text, no cell labels, no borders, no watermark. Each view should read clearly at a logical 44x48 pixel size. Wide horizontal sprite sheet.
 
 `public/assets/gatling.png` was generated with the built-in image generation tool. The original transparent PNG is preserved; the renderer trims transparent margins and draws it on a small pixel grid. Final prompt:
 

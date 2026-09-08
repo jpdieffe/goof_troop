@@ -41,11 +41,19 @@ export class WeaponTerrain{
     if(remember){if(!this.destroyed.has(this.room))this.destroyed.set(this.room,new Set());this.destroyed.get(this.room).add(i);}
   }
   blast(r,x,y){
+    return this.carve(r,x-28,y-56,x+28,y+20);
+  }
+  beam(r,x,y,dx,dy){
+    const endX=dx>0?247:dx<0?8:x,endY=dy>0?215:dy<0?18:y;
+    // A broad continuous cut, including the canopy above a solid tree's feet.
+    return this.carve(r,Math.min(x,endX)-12,Math.min(y,endY)-44,Math.max(x,endX)+12,Math.max(y,endY)+12);
+  }
+  carve(r,left,top,right,bottom){
     if(!this.floor)return 0;
     let changed=0;
     // Tall scenery includes a canopy above its solid footprint. Clear the blast
     // area above impact as well, while preserving the outer map boundary/water.
-    for(let ty=Math.max(2,(y-56)>>3);ty<=Math.min(26,(y+20)>>3);ty++)for(let tx=Math.max(1,(x-28)>>3);tx<=Math.min(30,(x+28)>>3);tx++){
+    for(let ty=Math.max(2,top>>3);ty<=Math.min(26,bottom>>3);ty++)for(let tx=Math.max(1,left>>3);tx<=Math.min(30,right>>3);tx++){
       const i=ty*32+tx,kind=r[0x1400+i]&0xf0;
       if(![0,0x80,0xc0,0xe0].includes(kind))continue;
       // Leave ordinary ground alone. Remove decorative canopy tiles too.
@@ -53,6 +61,7 @@ export class WeaponTerrain{
       if(this.destroyed.get(this.room)?.has(i))continue;
       // Do not erase native pickups, pots or puzzle objects sharing solid tiles.
       if([0x1040,0x1060,0x1080,0x10a0].some(b=>r[b]&&Math.abs(word(r,b+0x11)-(tx*8+4))<13&&Math.abs(word(r,b+0x14)-(ty*8+4))<13))continue;
+      if(this.pickups?.some(p=>Math.abs(p.x-(tx*8+4))<13&&Math.abs(p.y-(ty*8+4))<13))continue;
       this.clear(r,i);changed++;
     }
     this.count+=changed;return changed;

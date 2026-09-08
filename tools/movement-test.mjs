@@ -35,6 +35,8 @@ try{
  assert.ok(decodedDelta>30,`Guest video must keep advancing: ${decodedDelta}`);
  assert.ok(difference(oceanBefore,await videoPixels(guest,[20,180,200,40]))>2,'Ocean must animate while host is hidden');
  console.log('HIDDEN HOST AND ANIMATED OCEAN PASSED', {frameDelta,decodedDelta});
+ const nativePlayers=()=>host.evaluate(()=>{if(!window.goofGatling)return null;const r=EJS_emulator.Module.HEAPU8.subarray(goofGatling.base);return [0,1].map(i=>{const p=goofGatling.model.player(r,i);return {x:p.x,y:p.y};});});
+ const positionsBefore=await nativePlayers();
  const playerOneBefore=await videoPixels(guest,[54,94,21,40]);
  const playerTwoBefore=await videoPixels(guest,[86,102,23,33]);
  await guest.locator('#remote').screenshot({path:'test-results/movement-before.png'});
@@ -43,7 +45,11 @@ try{
  const playerOneDiff=difference(playerOneBefore,await videoPixels(guest,[54,94,21,40]));
  const playerTwoDiff=difference(playerTwoBefore,await videoPixels(guest,[86,102,23,33]));
  assert.ok(playerTwoDiff>8,`Player two must leave their starting position: ${playerTwoDiff}`);
- assert.ok(playerOneDiff<8,`Player one must remain still: ${playerOneDiff}`);
+ const positionsAfter=await nativePlayers();
+ // WebRTC can sharpen a stationary character as its encoder settles. Use native
+ // coordinates for isolation, while retaining the guest-video movement check.
+ if(positionsBefore&&positionsAfter){assert.deepEqual(positionsAfter[0],positionsBefore[0],'Player one must remain still');assert.ok(Math.hypot(positionsAfter[1].x-positionsBefore[1].x,positionsAfter[1].y-positionsBefore[1].y)>20,'Player two moves through native controller input');}
+ else assert.ok(playerOneDiff<8,`Player one must remain still: ${playerOneDiff}`);
  console.log('PLAYER TWO MOVEMENT PASSED',{playerOneDiff,playerTwoDiff});
  await guest.click('#sound');
  const audioPeak=await guest.evaluate(async()=>{const ctx=new AudioContext();await ctx.resume();const source=ctx.createMediaStreamSource(document.querySelector('video').srcObject),analyser=ctx.createAnalyser();source.connect(analyser);let peak=0;const samples=new Float32Array(analyser.fftSize);for(let i=0;i<20;i++){await new Promise(resolve=>setTimeout(resolve,100));analyser.getFloatTimeDomainData(samples);for(const value of samples)peak=Math.max(peak,Math.abs(value));}source.disconnect();await ctx.close();return peak;});
