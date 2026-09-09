@@ -4,13 +4,30 @@ A browser SNES player with two-person rooms. The host runs the original ROM thro
 
 **[Play online](https://jpdieffe.github.io/goof_troop/)** — choose your local ROM, create a room, and send the invite link to your friend. No local server or launcher is needed for the published site.
 
-## Beach weapons
+## Game modes
 
-Leave **Beach weapons** enabled when hosting. There are two Gatlings by the water and two rocket launchers farther up the opening beach, and two mech capsules above them. Walk close, face the item, and press **X / SNES B** to pick it up. It occupies your normal inventory box. Picking up a grappling gun or another item swaps it with your weapon; the old item stays on the ground for either player.
+After the original player-selection screen, the host chooses **Normal story** or **Zombie mode** with Up/Down and Enter, a controller, or the onscreen buttons. The guest sees the same selection screen.
 
-Hold **S / SNES Y** to use the weapon, or **Q / gamepad left shoulder / Fire** as a shortcut. Gatlings fire a stream of bullets. Rockets fire more slowly, deal blast damage, and destroy wall/tree tiles together with their collision. Mech capsules transform your character into a large robot. Hold fire for a continuous super laser that pierces through multiple pirates, trees and walls. Swap the capsule for another item to return to your character. Weapons use the original pirate defeat animation. Two pirates appear after the first weapon pickup for testing.
+**Normal story** runs the original game, without custom weapons, enemies, ammo rules, or terrain changes.
 
-The host needs the original USA ROM. Guests receive the complete modified scene through the usual stream. No separate ROM patch is needed. See [MODDING.md](MODDING.md) for implementation, scope and tests.
+**Zombie mode** starts both players with an unlimited-ammo pistol. Four starter pickups include a sword, shield, Gatling and rocket launcher. Bad guys arrive from the right in three increasingly large waves. Defeated enemies drop random items. After wave three, all surviving players walk to the right-hand exit to enter the next survival level, with rebuilt scenery and harder waves. Cleared-wave loot stays collectable but becomes passable so it cannot block the exit. Solo play works too.
+
+Face a pickup and press **X / SNES B** to take or swap it. Hold **S / SNES Y**, or **Q / gamepad left shoulder / Fire**, to use it. The old item stays on the ground with its remaining ammo. When a finite weapon runs out, you return to the unlimited pistol.
+
+| Item | Use | Starting supply |
+| --- | --- | --- |
+| Pistol | Steady single shots | Unlimited |
+| Sword | Short-range sweeping slash | Unlimited |
+| Gatling | Rapid bullet stream | 120 rounds |
+| Rocket launcher | Explosive rockets; destroys scenery | 6 rockets |
+| Mech suit | Transforms you; piercing super laser | 120 energy pulses |
+| Sniper rifle | Fast bullets that pierce multiple enemies | 10 rounds |
+| Grenade | Lobbed explosive with a short fuse | 4 grenades |
+| Shield projector | Ten-second bubble that repels enemies and reflects their shots | One activation |
+
+The shield remains active while you use another weapon. Its bar shows time remaining. The HUD shows your current item, ammo, lives, level and wave. Heavy weapons, shields, swords, sniper rifles and grenades all appear in the random drop pool.
+
+The host needs the original USA ROM for the mode selector and survival mod. Guests receive the whole scene and sound through the usual stream. See [MODDING.md](MODDING.md) for technical details and validation.
 
 ## Play on this computer
 
@@ -19,7 +36,7 @@ Double-click `start-game.bat`, or run `npm start` and open http://localhost:3000
 1. Click **Create a room**. The supplied `Goof Troop.zip` has been copied to `public/local-rom.zip` for local play. You can also choose an `.sfc`, `.smc`, or `.zip` file.
 2. Send your friend the invite link or the 12-character room code.
 3. An invite link joins automatically. Alternatively, your friend opens this app, enters the code, and clicks **Join** or presses Enter. The game receives keyboard focus automatically. They do not need the ROM. Click **Enable sound** after the video appears (browsers require an interaction for sound).
-4. On the title screen, choose **GAME** and press Enter. Press Enter again to skip the story. On **PLAYER SELECT**, press Down to highlight a bottom-row team showing both **1P** and **2P**, then Enter. The host controls player one; the friend controls player two.
+4. On the title screen, choose **GAME** and press Enter. Press Enter again to skip the story. On **PLAYER SELECT**, press Down to highlight a bottom-row team showing both **1P** and **2P**, then Enter. Choose **Normal story** or **Zombie mode** on the next screen. The host controls player one; the friend controls player two.
 
 Keep the host tab open and the computer awake. Hosting continues when you switch to another tab, including when testing player two in the same browser. Chrome or Edge desktop is recommended for the initial setup. Mobile has touch buttons; browser support and network conditions affect streaming.
 
@@ -61,15 +78,11 @@ npm start
 npm run test:browser
 # Real foreground/background tabs, with ordinary browser throttling:
 npm run test:movement
-# Beach pickups, bullets, native pirate flight, and guest firing:
-npm run test:gatling
-# Inventory swaps, native grapple use, rockets and destructible scenery:
-npm run test:weapons
-# Mech transformation, piercing laser, swaps and guest firing:
-npm run test:mech
+# Story selection, survival waves, all weapons, shields, loot and next level:
+npm run test:zombie
 ```
 
-The unit/integration tests validate input bounds, key release, room codes, and static server boundaries. The browser test loads the actual ROM, creates a real room, joins from a second tab, checks rendered video and non-silent audio samples, verifies player-two press/release at the emulator API, and tests leaving/rejoining. Screenshots are saved in `test-results/`. The browser test needs internet access and `public/local-rom.zip`. Testing two tabs cannot prove connectivity between all home networks.
+The unit/integration tests validate input bounds, key release, room codes, static server boundaries, untouched Story mode, item/ammo swaps, weapon damage, shield reflection and wave progression. The browser test loads the actual ROM, creates a real room, joins from a second tab, checks rendered video and non-silent audio samples, verifies player-two press/release at the emulator API, and tests leaving/rejoining. Screenshots are saved in `test-results/`. The browser test needs internet access and `public/local-rom.zip`. Testing two tabs cannot prove connectivity between all home networks.
 
 The movement regression opens real Chrome tabs and disables Playwright's forced-focus emulation and background-throttling overrides. It requires the host to report `document.hidden === true`, then checks normal emulation speed, advancing guest video, moving ocean pixels, independent player-two movement, and non-silent audio. This catches freezes that the ordinary headless connection test can miss.
 

@@ -40,6 +40,18 @@ export class WeaponTerrain{
     this.pending.push(i);
     if(remember){if(!this.destroyed.has(this.room))this.destroyed.set(this.room,new Set());this.destroyed.get(this.room).add(i);}
   }
+  arena(r,level){
+    // Rebuild the island scenery for each new survival arena, then open lanes.
+    // The original map/graphics remain local ROM data; uploads use the same DMA queue.
+    this.pending=[];this.destroyed.set(this.room,new Set());r.set(this.collision,0x1400);r.set(this.collision,0x1f800);
+    for(let i=0;i<1024;i++)this.pending.push({i,values:[this.layers[0][i],this.layers[1][i]]});
+    this.pickups=[];
+    this.carve(r,16,72,247,164);
+    // Different upper cover lanes in successive arenas.
+    if(level%3===1)this.carve(r,100,32,188,100);
+    if(level%3===2)this.carve(r,24,32,112,100);
+    if(level%3===0)this.carve(r,168,32,247,100);
+  }
   blast(r,x,y){
     return this.carve(r,x-28,y-56,x+28,y+20);
   }
@@ -72,9 +84,9 @@ export class WeaponTerrain{
     let q=r[0x40];if(q!==0||!this.pending.length)return;
     let src=0x1fc00;
     while(this.pending.length&&q<=0xe0){
-      const i=this.pending.shift(),x=i%32,y=i>>5;
+      const entry=this.pending.shift(),i=typeof entry==='number'?entry:entry.i,x=i%32,y=i>>5;
       for(let layer=0;layer<2;layer++){
-        const value=layer?this.floor[(y&1)*2+(x&1)]:0;put(r,src,value);
+        const value=entry.values?entry.values[layer]:layer?this.floor[(y&1)*2+(x&1)]:0;put(r,src,value);
         const a=0x1800+q;r[a]=1;put(r,a+1,(layer?0x5800:0x5000)+i);put(r,a+3,2);put(r,a+5,src&65535);r[a+7]=0x7f;q+=8;src+=2;
       }
     }

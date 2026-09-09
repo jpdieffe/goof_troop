@@ -1,24 +1,29 @@
 // Custom weapons use the valid bell item as a native inventory/ground-item carrier.
 // Its identity is kept separately; no out-of-range item IDs reach SNES jump tables.
+import {WEAPONS} from './weapons.js';
 export const WEAPON_CARRIER=0x0c;
 export const ITEM_USE_BUTTON=1; // SNES Y / keyboard S. Q remains a fire shortcut.
 const slots=[0x1040,0x1060,0x1080,0x10a0];
 const word=(r,a)=>r[a]|r[a+1]<<8;
 export class WeaponInventory{
   constructor(){this.reset();}
-  reset(){this.held=[null,null];this.room=-1;this.ground=[{room:0,x:64,y:144,type:'gatling'},{room:0,x:96,y:144,type:'gatling'},{room:0,x:64,y:88,type:'rocket'},{room:0,x:96,y:88,type:'rocket'},{room:0,x:64,y:56,type:'mech'},{room:0,x:96,y:56,type:'mech'}];this.bound=new Map();this.handled=new Set();this.serial=0;this.lastPickup=null;}
+  reset(){this.ammo=[null,null];this.limited=false;this.held=[null,null];this.room=-1;this.ground=[{room:0,x:64,y:144,type:'gatling'},{room:0,x:96,y:144,type:'gatling'},{room:0,x:64,y:88,type:'rocket'},{room:0,x:96,y:88,type:'rocket'},{room:0,x:64,y:56,type:'mech'},{room:0,x:96,y:56,type:'mech'}];this.bound=new Map();this.handled=new Set();this.serial=0;this.lastPickup=null;}
   restoreFlag(r,item){if(item?.flagOriginal!==undefined){const id=item.flagId,a=0x1160+(id>>1),shift=(id&1)*4;r[a]=(r[a]&~(15<<shift))|(item.flagOriginal<<shift);}}
+  equip(r,player,type,ammo=WEAPONS[type]?.ammo){this.held[player]=type;this.ammo??=[null,null];this.ammo[player]=ammo;const b=0x100+player*0x80;r[b+0x42]=WEAPON_CARRIER;}
+  spend(r,player){if(!this.limited)return;this.ammo[player]--;if(this.ammo[player]<=0){this.equip(r,player,'pistol');this.lastPickup={player,type:'pistol'};this.serial++;}}
   update(r,room){
+    this.ammo??=[null,null];
     if(this.room!==room){this.bound.clear();this.handled.clear();this.room=room;}
     // Native pickup leaves state 6 (empty old slot), or state 2 with $04 holding
     // the exchanged inventory ID. Consume that event once, including bell->bell.
     for(const b of slots){
       if(!r[b]||!(r[b+2]===6||(r[b+2]===2&&r[b+4]))){this.handled.delete(b);continue;}
       if(this.handled.has(b))continue;this.handled.add(b);
-      const player=r[b+5]===0x80?1:0,old=this.held[player],incoming=this.bound.get(b);
+      const player=r[b+5]===0x80?1:0,old=this.held[player],oldAmmo=this.ammo[player],incoming=this.bound.get(b);
       this.held[player]=incoming?.type||null;
+      this.ammo[player]=incoming?.ammo??WEAPONS[incoming?.type]?.ammo??null;
       if(incoming){this.restoreFlag(r,incoming);this.ground.splice(this.ground.indexOf(incoming),1);this.bound.delete(b);}
-      if(r[b+4]&&(old||incoming)){const drop={room,x:word(r,b+0x11),y:word(r,b+0x14),type:old,itemId:r[b+4],flagId:incoming?.flagId,flagOriginal:incoming?.flagOriginal};this.ground.push(drop);this.bound.set(b,drop);}
+      if(r[b+4]&&(old||incoming)){const drop={room,x:word(r,b+0x11),y:word(r,b+0x14),type:old,ammo:oldAmmo,itemId:r[b+4],flagId:incoming?.flagId,flagOriginal:incoming?.flagOriginal};this.ground.push(drop);this.bound.set(b,drop);}
       r[b+4]=0;
       this.lastPickup={player,type:this.held[player]};this.serial++;
     }

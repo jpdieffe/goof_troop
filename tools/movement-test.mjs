@@ -15,11 +15,14 @@ async function videoPixels(page,rect){return page.evaluate(([x,y,w,h])=>{
 function difference(a,b){return a.reduce((sum,value,index)=>sum+(index%4===3?0:Math.abs(value-b[index])),0)/a.length;}
 try{
  const host=await context.newPage();await host.goto(base);await host.bringToFront();if(romPath)await host.setInputFiles('#rom',romPath);await host.click('#host',{force:true});
- await host.waitForFunction(()=>window.EJS_emulator?.gameManager?.functions.getFrameNum()>500,{timeout:90000});
- for(const key of ['Enter','Enter','Enter','ArrowDown','Enter','KeyX','Enter']){await host.keyboard.press(key,{delay:500});await host.waitForTimeout(2500);}
+ await host.waitForFunction(()=>window.goofGatling&&EJS_emulator.gameManager.functions.getFrameNum()>500,null,{timeout:90000});
+ await host.bringToFront();await host.locator('#screen').focus();
+ for(const key of ['Enter','Enter','Enter','ArrowDown','Enter','KeyX','Enter']){if(await host.evaluate(()=>goofGatling.model.choosing||goofGatling.model.gameMode))break;await host.keyboard.press(key,{delay:400});await host.waitForTimeout(2000);}
+ await host.waitForFunction(()=>goofGatling.model.choosing||goofGatling.model.gameMode==='story');if(await host.evaluate(()=>goofGatling.model.choosing))await host.keyboard.press('Enter',{delay:150});await host.waitForFunction(()=>goofGatling.model.gameMode==='story');
  const code=await host.locator('#room-code').textContent();
  const guest=await context.newPage();await guest.goto(new URL('?room='+code,base).href);await guest.bringToFront();
  await guest.waitForFunction(()=>document.querySelector('video').videoWidth>0,{timeout:45000});
+ if(!await host.evaluate(()=>EJS_emulator.Module.HEAPU8[goofGatling.base+0x180])){await guest.keyboard.press('Enter',{delay:150});await host.waitForFunction(()=>EJS_emulator.Module.HEAPU8[goofGatling.base+0x180]>0);}
  assert.equal(await guest.evaluate(()=>document.activeElement.id),'screen');
  assert.equal(await guest.locator('#join').isDisabled(),true);
  assert.equal(await host.evaluate(()=>document.hidden),true,'Host must really be hidden, not focus-emulated');

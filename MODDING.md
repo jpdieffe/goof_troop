@@ -1,69 +1,45 @@
-# Beach weapons
+# Story and Zombie modes
 
-Enabled by default; uncheck **Beach weapons** before hosting for the original game. Requires the unmodified USA ROM (524,288 bytes, CRC32 `4aafa462`); a 512-byte copier header is accepted. ZIP extraction is handled by EmulatorJS. Other ROMs run without the mod and show an explanation.
+The host chooses the game type after the native player-selection screen. The selector runs on the same host simulation clock and is composited into the guest video. It waits for a new button press so holding Start through player selection cannot skip it. The host can also click/tap either option. Gameplay input is suppressed until selection and arena preparation finish.
 
-Two Gatlings wait near the water at the first beach; two rocket launchers wait farther up the sand, with two mech capsules above them. Approach and face an item, then press **X / SNES B** to pick it up with the original animation. The weapon occupies the normal co-op inventory slot and displays its icon in that box. Taking the grappling gun, another weapon, or another native item exchanges it with your equipped item. The old item stays on the ground and can be picked back up by either player.
+Normal story makes no custom gameplay changes. Zombie mode uses the original USA ROM (524,288 bytes, CRC32 4aafa462; a 512-byte copier header is accepted). Unsupported ROMs run normally and show an explanation. No ROM, modified ROM, game graphics, or disassembly is distributed.
 
-Use **S / SNES Y**, or **Q / gamepad left shoulder / Fire** as a shortcut. Gatlings fire every four frames; rockets every forty frames. Rockets explode on impact, defeat nearby pirates, and remove wall/tree graphics and collision. NPCs and other players are not damaged. Water, room boundaries and item pickups are preserved. The original destructible-wall handler is triggered for wall sprites. Ordinary terrain destruction is remembered across room revisits during the session. Two native Jolly pirates spawn for beach target practice after the first weapon pickup.
+## Survival loop
 
-Regular pirates are the supported enemy family; bosses and other families keep their original behavior. Native inventory animations and pauses stop custom firing. Custom weapon identity, dropped-item records, and destroyed scenery are session state, not part of emulator save states/rewind. Reload/start a new game to reset the playground.
+Each survival level has three waves: initially four, six and eight enemies. Later levels add enemies, up to eight extra per wave. No more than four living wave enemies spawn at once; the native graphics-slot pool also limits spawning. Bad guys enter at the right in three lanes and pursue the players. Every third spawn also fires green projectiles that shields can reflect.
 
-## Implementation
+The director watches each native enemy through initialization, defeat and cleanup. A defeat creates one random item drop. Wave completion waits for every queued enemy and native death animation to finish. After wave three, all surviving players move to the right to advance. Cleared-wave loot remains collectable but no longer blocks movement to the exit. This starts a new survival arena, moves players to its left edge, rebuilds the local-ROM island scenery with a different cover pattern, and increases difficulty. These are custom survival levels, not the original story-room sequence.
 
-This is a browser runtime mod of the original game, not a full decompilation or a replacement engine. No modified ROM, disassembly, game graphics or game audio is distributed. The host renders custom art and projectiles over the emulated scene, and composites both into the video stream. Guests need neither a ROM nor a patch. The mod runs immediately after the pinned core's main-loop iteration; it does not depend on foreground browser animation callbacks.
+Random drops choose among Gatling, rockets, mech, shield, sword, sniper and grenades. They use free walkable grid positions and retain their ammo when swapped. At most 18 ground records are kept; an old unbound drop can be replaced when the floor is full. New levels clear floor loot while preserving held weapons and remaining ammo.
 
-`gatling.js` verifies the ROM fingerprint before accessing game memory. It locates WRAM using a temporary eight-byte Pro Action Replay marker at unused `$7F:FFF0` through Snes9x's cheat interface, and clears the startup probes in a `finally` block. It accepts exactly one matching memory region and obtains a fresh heap view each frame. No fixed WASM address is assumed. The original ROM bytes are never changed. This bridge is specific to EmulatorJS 4.2.3's legacy Snes9x core.
+The pistol and sword are unlimited. Gatlings have 120 rounds, rockets six, mechs 120 laser pulses, sniper rifles ten rounds, grenades four, and shields one activation. An exhausted item returns the player to the pistol. Shields last 600 active simulation frames, repel enemies and reflect their projectiles, and remain active after switching weapons. Native pause/pickup animations pause combat and shield timers. Sniper rounds pierce enemies; swords sweep an arc; grenades travel over obstacles and detonate after 45 active frames.
 
-`gatling-model.js` reads the two players at `$7E:0100` and `$7E:0180`, coordinates at offsets `$11`/`$14`, and facing at `$47`. Gameplay mode is `$A0 = 8`, normal room state `$A2 = 4`, pause/freeze `$AB`/`$AC`, and level/room `$B6`/`$B7`. Collision data is the 32-column array of 8-pixel tiles at `$1400`.
+## Runtime integration
 
-Pirates are sprite ID `$0C` in 24 slots at `$0200 + n*$50`. A bullet sets HP `$1C` to zero, preserves the previous HP in `$1D`, chooses the impact direction in `$0D`, cancels a previous stun, and enters hurt state `$02 = 4`, substate `$03 = 0`. The original routines `$81:E5B3` (skinny pirates) and `$81:F174` (burly pirates) choose their proper death sprites. `$81:FC88` launches the enemy with the original `$03A0` vertical speed and four-pixel horizontal/vertical velocity; `$81:FCA9` applies gravity. The game plays its defeat sound and eventually releases the sprite/graphics slot through `$80:8F0F`. We do not delete enemies or fake their flight with an overlay.
+This is a browser runtime mod of the original game, not a full decompilation. `game-session.js` gates the original-game path and `zombie-mode.js` owns the survival loop. `gatling-model.js` implements weapons, and `weapons.js` defines supplies and firing cadence. The host renders custom art and effects over the emulated scene and composites both into the stream. Effects audio enters the emulator's existing audio gain. Guests need no ROM or patch.
 
-Two empty normal sprite slots on the beach are initialized as Jolly pirates. Their original initialization allocates graphics through `$80:8EE9`. Spawning requires two available graphics slots and two free sprite slots. This happens only in the opening room; regular room loading retains responsibility for the game's enemy and door bookkeeping.
+The pinned EmulatorJS 4.2.3 legacy Snes9x main-loop hook runs the mod immediately after each core iteration. The existing worker clock and hidden-host OpenAL/video fixes remain in use. `gatling.js` verifies the ROM fingerprint and locates WRAM through a temporary eight-byte PAR marker at unused $7F:FFF0, cleared in a finally block. It accepts exactly one heap match; no fixed WASM pointer is assumed.
 
-Memory and routine references were investigated using [Yoshifanatic1's disassembly](https://github.com/Yoshifanatic1/Goof-Troop-Disassembly), [FURiOUS's practice cart](https://github.com/furious/gooftroop), and [GoofTroopEditor](https://github.com/Zarby89/GoofTroopEditor). Those research checkouts are ignored and not shipped. Application code implements the behavior independently; upstream projects retain their licenses.
+Players are at $0100/$0180; position is at offsets $11/$14, facing at $47. Gameplay is $A0=8 and room-ready is $A2=4. The selector and arena preparation use the native $AC freeze while the core continues ticking. Ordinary pauses are $AB. Input held across preparation is restored when play resumes.
 
-## Inventory and scenery
+Items use the valid native bell ID $0C as their inventory carrier, with custom identity and ammo stored separately. Native pickup animation and swap events drive inventory changes. Solo Zombie mode keeps the primary slot selected; Story retains its original inventory behavior. Four native world slots at $1040/$1060/$1080/$10A0 are lent to nearby custom pickups. Distant idle custom objects can be evicted, restoring collision exactly as native cleanup $82:B100 does. Native items and in-progress pickups are not evicted. Original persistence flag nibbles are restored after synthetic-item updates.
 
-`weapon-inventory.js` uses the game's valid bell item ID (`$0C`) as the native carrier and tracks Gatling/rocket identity separately. Custom ground objects use the four native item slots `$1040..$10A0`. The original pickup code exchanges the carrier in `$0142`/`$01C2`, updates the inventory and plays the pickup animation. The mod consumes the native pickup/exchange event once, transfers custom identity to the recipient, and tags the dropped item. Native grappling guns remain original items and regain their original Y-button behavior immediately after a swap. Native item-use input is suppressed only while a custom weapon occupies that player's slot. The renderer replaces the carrier's ground and HUD artwork with the correct sprite.
+Wave enemies are native wandering pirates, sprite ID $0C. Their own initialization allocates graphics. Weapon damage zeroes HP $1C, preserves previous HP in $1D, selects impact direction, clears old stun, and enters native hurt state 4. The native routines choose the defeat animation, launch the enemy, play sound, and release its sprite/graphics slot. Projectile hits on players enter the game's normal hurt/death handler. Story NPCs are not targets. Survival only spawns this supported pirate family; the weapon bridge does not add boss-specific damage handlers.
 
-Synthetic ground items temporarily borrow a native persistence nibble; its original value is restored after native processing so collecting a beach weapon does not change an unrelated level-item flag. Dropped native items at synthetic locations are also tracked. Room revisits rebind existing native ground objects before allocating free slots, avoiding duplicate drops. No custom item ID is passed to an out-of-range native dispatch table.
+`weapon-terrain.js` decodes map metatiles from the selected ROM. Destruction changes native collision at $1400 and backing collision at $7F:F800, plus real foreground/background VRAM maps $5000/$5800. Bounded uploads use the native DMA queue at $1800 and scratch words at $7F:FC00. Queue writes wait for prior transfers to finish. Arena rebuilding uploads the original map before carving its new lanes. Pickups, water and outer map boundaries are protected.
 
-`weapon-terrain.js` decodes the room's original 32/16/8-pixel metatiles directly from the locally supplied ROM. A rocket clears affected collision bytes at `$1400` and their backing copy at `$7F:F800`. It replaces foreground tiles and supplies matching walkable ground underneath. Item collision is protected. Tall scenery above impact is included in the blast so tree canopies are removed along with their footprint.
+Custom weapon identity/ammo, shields, projectiles, survival state and terrain destruction are session state, outside emulator save states/rewind. Reload to start a fresh session. Weapons use the original player movement footprint even when a large mech is drawn over the character.
 
-Background changes use the native DMA queue at `$1800`, bounded by its `$40` cursor. Small tile uploads target foreground/background VRAM maps `$5000` and `$5800`, with transient source words at unused `$7F:FC00`. Uploads wait when the game's queue is busy. This changes the actual emulated background, so characters can walk through the resulting hole and guests see the same scene. Destruction records are reapplied when returning to a room; original dynamic objects and native wall sprites retain their own handlers.
-
-## Mech suits
-
-The mech capsule occupies the same native inventory slot as a gun. Two capsules
-start at (64,56) and (96,56), above the rocket row. Equipping one draws a large
-directional robot over the adventurer, with a transformation ring and walking bob.
-Native movement, damage, pickup animations and room transitions remain active.
-Swapping the capsule for any other item returns the original character immediately.
-Hold the regular weapon button for a continuous laser; release stops it. Each
-player has an independent beam, cyan for player one and gold for player two.
-
-The laser traces the entire room in the current facing direction every six game
-frames, defeating every regular pirate along the ray with the original death
-handler and damaging native breakable-wall sprites. A broad terrain cut removes
-successive trees and solid walls, including their canopy tiles, without stopping
-at the first obstacle. Items, friendly NPCs, water and outer room boundaries remain
-intact. The existing limitation for bosses and other enemy families still applies.
-Laser audio enters the same native audio gain used by the guest stream.
-
-There are six custom beach pickups but only four native world-item slots. Nearby
-custom pickups borrow slots from distant, idle custom items; original native
-items and pickup animations are never evicted. Slot recycling restores the four
-collision bytes from the room backing map, matching native cleanup at $82:B100.
-Unbound custom pickups retain their artwork and identity, and rebind before a
-player enters pickup range. Terrain destruction protects those pickups too.
-
-`npm run test:mech` uses real controller input to pick up a mech before any other
-item, verifies inventory and swapping out/back, fires through two native practice
-pirates and multiple obstacles, walks through the cut, and tests the second mech
-over WebRTC with the host hidden. The test positions the two initialized pirates
-in the firing lane; production spawning remains at their original beach positions.
+RAM investigation used [Yoshifanatic1's disassembly](https://github.com/Yoshifanatic1/Goof-Troop-Disassembly), [FURiOUS's practice cart](https://github.com/furious/gooftroop), and [GoofTroopEditor](https://github.com/Zarby89/GoofTroopEditor). Research checkouts are ignored and not shipped.
 
 ## Art
+
+`public/assets/zombie-items.png` contains the new pistol, sniper rifle, grenade,
+sword and shield projector. It was generated with the built-in image generation
+tool. The transparent original is preserved; the renderer trims each object and
+preserves its proportions at game resolution. Final prompt:
+
+> Use case: stylized-concept. Production pixel-art pickup sprite sheet for a colorful 1990s SNES top-down cartoon adventure. Truly transparent background. EXACTLY FIVE separate objects in one horizontal row of FIVE equal-width cells, generous transparent separation, each object centered fully within its cell. From LEFT to RIGHT: 1 a chunky silver and orange compact PISTOL facing right; 2 a long dark teal SNIPER RIFLE with scope and brass barrel facing right; 3 a round olive-green GRENADE with brass safety lever and pin; 4 a gleaming steel SWORD with blue hilt, blade angled up-right; 5 a small cobalt SHIELD PROJECTOR device with a bright cyan hexagonal shield emblem. Crisp dark navy pixel outlines, flat limited 16-bit palette, chunky readable shapes, slight top-down three-quarter perspective, no gradients or antialiasing. These must read at 24x20 logical pixels. No lasers, no explosions, no people, no scenery, no labels, no text, no cell borders, no watermark. Wide transparent sprite sheet.
 
 `public/assets/mech.png` was generated with the built-in image generation tool.
 The original transparent three-view sheet is preserved. The renderer crops the
@@ -82,6 +58,8 @@ Final prompt:
 
 ## Verification
 
-`npm test` covers native inventory exchange events (including same-carrier weapon swaps), loss of gun firing after taking a grapple, independent firing, native pirate damage, rocket cadence, pauses, collision removal, item protection, bounded DMA writes and terrain persistence, plus the original controller/server tests.
+`npm test` covers input/server boundaries, Story isolation, selector input edges, native item exchange and ammo persistence, finite ammo fallback, firing, terrain collision/DMA bounds, shield bounce/reflection, one drop per defeat, and three-wave/next-level rules.
 
-`npm run test:gatling` exercises two real Chrome tabs, native pickups, remote firing with a hidden host, original pirate flight/cleanup and independent host controls. `npm run test:weapons` adds a native grappling-gun fixture to exercise swapping, original grapple use and re-pickup, then collects a rocket, destroys trees/walls, and walks through the former obstacles using normal controller input. It supports an optional live URL and local ROM path. `npm run test:movement` checks animated guest video, background-host speed and audio. Screenshots go to ignored `test-results/`.
+`npm run test:zombie` runs real Chrome host/guest tabs. It checks Story gameplay, the streamed selector, native shield pickup, activation/bounce/reflection, each weapon through normal controller input, three complete waves, enemy loot pickup, guest firing with a truly hidden host, and walking through the right exit into level two. Controlled test fixtures position initialized enemies in a firing lane and provide loadouts for weapon coverage; production spawning, native death, slot cleanup, loot and wave counters are exercised directly. The older test:gatling/test:weapons/test:mech commands are aliases for this current survival test.
+
+`npm run test:movement` (also test:browser) checks Story-mode player isolation, guest ocean animation, background-host frame rate, non-silent audio, invite auto-join and reconnect focus. Screenshots are saved to ignored test-results/.
