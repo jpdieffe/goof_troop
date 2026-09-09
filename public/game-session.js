@@ -15,14 +15,13 @@ export class GameSession extends GatlingModel{
       else{if(edges&((1<<4)|(1<<5)))this.selection^=1;if(edges&((1<<3)|1|(1<<8)))this.pendingChoice=this.selection?'zombie':'story';}
       if(!this.pendingChoice)return;
       this.gameMode=this.pendingChoice;this.pendingChoice=null;this.choosing=false;this.inputLock=true;r[0xac]=this.savedFreeze;
-      this.inventory.ground=[];
       if(this.gameMode==='zombie'){
+        this.inventory.ground=[];
         this.room=r[0xb6]*256+r[0xb7];this.active=true;this.terrain?.enter(r,this.room);this.inventory.limited=true;this.zombie=new ZombieMode();this.zombie.prepare(this,r);
       }
       return;
     }
     if(this.inputLock&&masks.every(m=>!m))this.inputLock=false;
-    if(this.gameMode==='story')return;
     this.targetsSpawned=true;
     super.tick(r,this.blocksInput?[0,0]:masks);
     if(this.zombie&&this.active)this.zombie.tick(this,r);

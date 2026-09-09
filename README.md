@@ -8,7 +8,7 @@ A browser SNES player with two-person rooms. The host runs the original ROM thro
 
 After the original player-selection screen, the host chooses **Normal story** or **Zombie mode** with Up/Down and Enter, a controller, or the onscreen buttons. The guest sees the same selection screen.
 
-**Normal story** runs the original game, without custom weapons, enemies, ammo rules, or terrain changes.
+**Normal story** follows the original adventure with two Gatling guns, two rocket launchers, and two mech pickups on the first beach. These weapons have unlimited ammo and swap with regular inventory items.
 
 **Zombie mode** starts both players with an unlimited-ammo pistol. Four starter pickups include a sword, shield, Gatling and rocket launcher. Bad guys arrive from the right in three increasingly large waves. Defeated enemies drop random items. After wave three, all surviving players walk to the right-hand exit to enter the next survival level, with rebuilt scenery and harder waves. Cleared-wave loot stays collectable but becomes passable so it cannot block the exit. Solo play works too.
 
@@ -82,7 +82,7 @@ npm run test:movement
 npm run test:zombie
 ```
 
-The unit/integration tests validate input bounds, key release, room codes, static server boundaries, untouched Story mode, item/ammo swaps, weapon damage, shield reflection and wave progression. The browser test loads the actual ROM, creates a real room, joins from a second tab, checks rendered video and non-silent audio samples, verifies player-two press/release at the emulator API, and tests leaving/rejoining. Screenshots are saved in `test-results/`. The browser test needs internet access and `public/local-rom.zip`. Testing two tabs cannot prove connectivity between all home networks.
+The unit/integration tests validate input bounds, key release, room codes, static server boundaries, Story beach weapons, item/ammo swaps, weapon damage, shield reflection and wave progression. The browser test loads the actual ROM, creates a real room, joins from a second tab, checks rendered video and non-silent audio samples, verifies player-two press/release at the emulator API, and tests leaving/rejoining. Screenshots are saved in `test-results/`. The browser test needs internet access and `public/local-rom.zip`. Testing two tabs cannot prove connectivity between all home networks.
 
 The movement regression opens real Chrome tabs and disables Playwright's forced-focus emulation and background-throttling overrides. It requires the host to report `document.hidden === true`, then checks normal emulation speed, advancing guest video, moving ocean pixels, independent player-two movement, and non-silent audio. This catches freezes that the ordinary headless connection test can miss.
 

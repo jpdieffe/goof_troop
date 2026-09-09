@@ -2,7 +2,7 @@
 
 The host chooses the game type after the native player-selection screen. The selector runs on the same host simulation clock and is composited into the guest video. It waits for a new button press so holding Start through player selection cannot skip it. The host can also click/tap either option. Gameplay input is suppressed until selection and arena preparation finish.
 
-Normal story makes no custom gameplay changes. Zombie mode uses the original USA ROM (524,288 bytes, CRC32 4aafa462; a 512-byte copier header is accepted). Unsupported ROMs run normally and show an explanation. No ROM, modified ROM, game graphics, or disassembly is distributed.
+Normal story restores the six opening-beach weapon pickups with unlimited ammo, while keeping the original story progression and enemies. Both modes use the original USA ROM (524,288 bytes, CRC32 4aafa462; a 512-byte copier header is accepted). Unsupported ROMs run normally and show an explanation. No ROM, modified ROM, game graphics, or disassembly is distributed.
 
 ## Survival loop
 
@@ -58,7 +58,7 @@ Final prompt:
 
 ## Verification
 
-`npm test` covers input/server boundaries, Story isolation, selector input edges, native item exchange and ammo persistence, finite ammo fallback, firing, terrain collision/DMA bounds, shield bounce/reflection, one drop per defeat, and three-wave/next-level rules.
+`npm test` covers input/server boundaries, Story beach pickups and unlimited ammo, selector input edges, native item exchange and ammo persistence, finite ammo fallback, firing, terrain collision/DMA bounds, shield bounce/reflection, one drop per defeat, and three-wave/next-level rules.
 
 `npm run test:zombie` runs real Chrome host/guest tabs. It checks Story gameplay, the streamed selector, native shield pickup, activation/bounce/reflection, each weapon through normal controller input, three complete waves, enemy loot pickup, guest firing with a truly hidden host, and walking through the right exit into level two. Controlled test fixtures position initialized enemies in a firing lane and provide loadouts for weapon coverage; production spawning, native death, slot cleanup, loot and wave counters are exercised directly. The older test:gatling/test:weapons/test:mech commands are aliases for this current survival test.
 

@@ -21,7 +21,10 @@ try{
   const before=await host.evaluate(()=>({frame:EJS_emulator.gameManager.functions.getFrameNum(),x:EJS_emulator.Module.HEAPU8[goofGatling.base+0x111]}));
   await host.keyboard.press('ArrowRight',{delay:400});await host.waitForTimeout(500);
   assert.ok(await host.evaluate(b=>EJS_emulator.gameManager.functions.getFrameNum()>b.frame+20&&EJS_emulator.Module.HEAPU8[goofGatling.base+0x111]>b.x,before));
-  assert.deepEqual(await host.evaluate(()=>goofGatling.model.inventory.ground),[]);await shot(host,'test-results/normal-story.png');await context.close();console.log('STORY: ORIGINAL GAME, NO CUSTOM PICKUPS, CONTROLS RUNNING');
+  assert.deepEqual(await host.evaluate(()=>goofGatling.model.pickups.map(g=>g.type)),['gatling','gatling','rocket','rocket','mech','mech']);
+  await host.evaluate(()=>{const r=EJS_emulator.Module.HEAPU8.subarray(goofGatling.base);r[0x111]=64;r[0x114]=132;r[0x147]=4;});
+  await ready(0);await host.keyboard.press('KeyX',{delay:150});await host.waitForFunction(()=>goofGatling.model.inventory.held[0]==='gatling');await ready(0);
+  await host.keyboard.press('KeyS',{delay:500});assert.ok(await host.evaluate(()=>goofGatling.model.shots[0]>1&&!goofGatling.model.inventory.limited&&!goofGatling.model.zombie));await shot(host,'test-results/normal-story.png');await context.close();console.log('STORY: SIX BEACH WEAPONS, NATIVE PICKUP, UNLIMITED FIRING, CONTROLS RUNNING');
 
   context=await boot();const errors=[];host.on('pageerror',e=>errors.push(e.message));
   guest=await context.newPage();guest.on('pageerror',e=>errors.push(e.message));await guest.goto(new URL('?room='+await host.locator('#room-code').textContent(),url).href);await guest.bringToFront();await guest.waitForFunction(()=>document.querySelector('video').videoWidth>0,null,{timeout:45000});await shot(guest,'test-results/mode-selection-guest.png');

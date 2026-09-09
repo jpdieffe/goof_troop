@@ -6,12 +6,16 @@ import {ZombieMode} from '../public/zombie-mode.js';
 import {WeaponTerrain} from '../public/weapon-terrain.js';
 import {WEAPONS,SHIELD_TIME} from '../public/weapons.js';
 function beach(){const r=new Uint8Array(0x20000);r[0xa0]=8;r[0xa2]=4;r[0xbd]=3;for(const b of [0x100,0x180]){r[b]=1;r[b+1]=1;r[b+2]=2;r[b+0x11]=64;r[b+0x14]=128;r[b+0x47]=2;r[b+0x1c]=1;}return r;}
-test('post-player menu waits for a new host confirm and Story leaves native gameplay untouched',()=>{
+test('post-player menu waits for a new host confirm and Story restores beach weapons without survival waves',()=>{
   const r=beach(),m=new GameSession();m.tick(r,[8,0]);assert.ok(m.choosing);assert.equal(r[0xac],6);
   for(let i=0;i<25;i++)m.tick(r,[8,0]);assert.ok(m.choosing,'held Start cannot skip the menu');
   m.tick(r,[0,0]);m.tick(r,[0,8]);assert.ok(m.choosing,'guest cannot select for the host');
-  m.tick(r,[8,0]);assert.equal(m.gameMode,'story');assert.equal(r[0xac],0);m.tick(r,[0,0]);const before=r.slice();
-  for(let i=0;i<30;i++)m.tick(r,[1024,0]);assert.deepEqual(r,before);assert.equal(m.active,false);assert.deepEqual(m.inventory.ground,[]);
+  m.tick(r,[8,0]);assert.equal(m.gameMode,'story');assert.equal(r[0xac],0);m.tick(r,[0,0]);
+  assert.equal(m.active,true);assert.equal(m.zombie,null);assert.equal(m.inventory.limited,false);
+  assert.deepEqual(m.pickups.map(g=>g.type),['gatling','gatling','rocket','rocket','mech','mech']);
+  assert.ok(m.inventory.bound.size>0,'beach pickups bind to native item slots');
+  m.inventory.equip(r,0,'gatling',1);for(let i=0;i<30;i++)m.tick(r,[1024,0]);
+  assert.ok(m.shots[0]>1);assert.equal(m.inventory.held[0],'gatling');assert.equal(m.inventory.ammo[0],1,'Story weapons retain unlimited use');
 });
 test('finite heavy ammo falls back to pistol; sword is unlimited and shield expires',()=>{
   const r=beach(),m=new GatlingModel();m.tick(r,[0,0]);m.inventory.limited=true;m.inventory.equip(r,0,'rocket',1);m.tick(r,[1024,0]);

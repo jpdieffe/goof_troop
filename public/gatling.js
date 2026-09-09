@@ -124,7 +124,7 @@ export async function installGatling(emulator,getMasks,onError){
       }
     }
     if(model.choosing){ctx.fillStyle='#10262e';ctx.fillRect(0,0,256,224);ctx.fillStyle='#bce880';ctx.textAlign='center';ctx.font='9px monospace';ctx.fillText('GOOF TROOP / PLAY TOGETHER',128,31);ctx.fillStyle='#ffffff';ctx.font='16px monospace';ctx.fillText('CHOOSE YOUR GAME',128,62);
-      ['NORMAL STORY','ZOMBIE MODE'].forEach((label,i)=>{ctx.fillStyle=model.selection===i?'#d4ee99':'#22444c';ctx.fillRect(27,82+i*47,202,39);ctx.fillStyle=model.selection===i?'#18323b':'#d8ebdc';ctx.font='11px monospace';ctx.fillText(label,128,100+i*47);ctx.font='7px monospace';ctx.fillText(i?'3 waves. Random loot. Keep moving.':'The original island adventure.',128,112+i*47);});ctx.fillStyle='#a9cbc7';ctx.font='8px monospace';ctx.fillText('HOST: UP/DOWN + ENTER',128,196);ctx.textAlign='left';}
+      ['NORMAL STORY','ZOMBIE MODE'].forEach((label,i)=>{ctx.fillStyle=model.selection===i?'#d4ee99':'#22444c';ctx.fillRect(27,82+i*47,202,39);ctx.fillStyle=model.selection===i?'#18323b':'#d8ebdc';ctx.font='11px monospace';ctx.fillText(label,128,100+i*47);ctx.font='7px monospace';ctx.fillText(i?'3 waves. Random loot. Keep moving.':'Story adventure + beach weapons.',128,112+i*47);});ctx.fillStyle='#a9cbc7';ctx.font='8px monospace';ctx.fillText('HOST: UP/DOWN + ENTER',128,196);ctx.textAlign='left';}
     output.drawImage(emulator.canvas,0,0,canvas.width,canvas.height);
     output.drawImage(overlay,0,0,canvas.width,canvas.height);
   }
