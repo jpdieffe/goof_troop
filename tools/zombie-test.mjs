@@ -9,6 +9,7 @@ async function shot(page,path){const clip=await page.locator('#screen').bounding
 async function boot(){
   const context=await browser.newContext({viewport:{width:1400,height:1100}});host=await context.newPage();await host.goto(url);await host.bringToFront();await host.setInputFiles('#rom',rom);await host.click('#host',{force:true});
   await host.waitForFunction(()=>window.goofGatling&&EJS_emulator.gameManager.functions.getFrameNum()>500,null,{timeout:90000});
+  await host.bringToFront();await host.waitForFunction(()=>!document.hidden);await host.locator('#screen').focus();
   for(const key of ['Enter','Enter','Enter','ArrowDown','Enter','KeyX','Enter']){if(await host.evaluate(()=>goofGatling.model.choosing))break;await host.keyboard.press(key,{delay:400});await host.waitForTimeout(2000);}
   await host.waitForFunction(()=>goofGatling.model.choosing);return context;
 }

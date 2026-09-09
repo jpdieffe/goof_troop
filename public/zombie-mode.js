@@ -89,6 +89,6 @@ export class ZombieMode{
     });
     const living=[...this.enemies.values()].filter(e=>!e.dead).length;
     if(this.remaining&&living<4&&--this.timer<=0){if(this.spawn(r)){this.remaining--;this.timer=70;}}
-    if(!this.remaining&&!this.enemies.size){if(this.wave===3){this.phase='exit';m.notice='AREA CLEAR! Everyone head RIGHT ->';m.noticeTime=999999;}else{this.phase='break';this.timer=180;m.notice='Wave cleared! Grab your drops.';m.noticeTime=180;}}
+    if(!this.remaining&&!this.enemies.size){this.projectiles=[];if(this.wave===3){this.phase='exit';m.notice='AREA CLEAR! Everyone head RIGHT ->';m.noticeTime=999999;}else{this.phase='break';this.timer=180;m.notice='Wave cleared! Grab your drops.';m.noticeTime=180;}}
   }
 }

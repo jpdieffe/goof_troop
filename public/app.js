@@ -56,7 +56,7 @@ async function loadGame(){let rom=$('rom').files[0];if(!rom){const response=awai
   },EJS_onGameStart:async()=>{
     if(window.EJS_emulator.failedToStart)return fail('The emulator could not start. Reload and check browser graphics support.');
     if($('gatling-enabled').checked){try{gatling=await installGatling(window.EJS_emulator,()=>[localMask,remoteMask],error=>fail('Weapon mod stopped: '+error.message));window.goofGatling=gatling;}catch(error){$('mod-note').textContent=error.message+' Playing without the mod.';}}
-    ready=true;window.EJS_emulator.keyChange=()=>{};window.EJS_emulator.gamepadEvent=()=>{};
+    ready=true;window.EJS_emulator.keyChange=()=>{};window.EJS_emulator.gamepadEvent=()=>{};focusGame();
     status('Game ready. Choose GAME, skip the intro with Enter, then select your team and game mode.');startCall();
   }});
   const loader=document.createElement('script');loader.src=window.EJS_pathtodata+'loader.js';loader.onerror=()=>fail('Emulator download failed. Check your connection and reload.');document.body.append(loader);

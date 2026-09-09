@@ -35,7 +35,7 @@ test('shield bounces a live enemy and reflects its projectile into native defeat
 });
 test('three completed waves open exit; both players must reach it before next arena',()=>{
   const r=beach(),m=new GatlingModel(new WeaponTerrain(new Uint8Array(0x80000))),z=new ZombieMode();m.tick(r,[0,0]);z.phase='wave';z.wave=3;z.remaining=0;
-  z.tick(m,r);assert.equal(z.phase,'exit');r[0x111]=230;z.tick(m,r);assert.equal(z.level,1);
+  z.projectiles.push({x:180,y:80,vx:1,vy:0,owner:-1,life:60});z.tick(m,r);assert.equal(z.phase,'exit');assert.deepEqual(z.projectiles,[]);r[0x111]=230;z.tick(m,r);assert.equal(z.level,1);
   r[0x191]=230;z.tick(m,r);assert.equal(z.level,2);assert.equal(z.wave,0);assert.equal(z.phase,'preparing');assert.equal(r[0x111],40);assert.equal(r[0x191],40);assert.ok(m.terrain.pending.length>=1024);
 });
 test('enemy death creates exactly one random drop with a fresh ammo count',()=>{
